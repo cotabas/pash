@@ -36,8 +36,6 @@ import (
 // 	}, nil
 // }
 
-
-
 type entry struct {
 
   Service string
@@ -45,6 +43,12 @@ type entry struct {
   Password string
 }
 
+type database struct {
+
+  Name string
+  Entries entry
+
+}
 
 
 func addEntry() (string, string, string) {
@@ -75,10 +79,29 @@ func main() {
     Username: "cotabas",
     Password: "qwerty"}
 
-    jt, _ := json.Marshal(t)
+    mt := map[int]*entry{}
+
+    mt[0] = t
+
+    mt[1] = t
+
+    jt, _ := json.Marshal(mt)
 
   fmt.Print(string(jt))
   test.Write(jt)
+  test.Write(jt)
+
+  reed, _ := os.ReadFile("tester.json")
+
+  //fmt.Print(reed)
+
+  var tj = entry{}
+
+  fmt.Print(string(reed))
+
+  json.Unmarshal(reed, &tj)
+
+  fmt.Print(tj)
   //service, username, password := addEntry()
 
   //fmt.Println("Service   Username   Password")
