@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"os/exec"
 )
 
 type entry struct {
@@ -43,10 +44,16 @@ func addFile(fileName string) {
 }
 
 func showEntries(store map[int]entry) {
-  fmt.Println(".  Service    Username    Password")
+  fmt.Println(".  Service             Username            Password")
   for i := 0; i < len(store); i++ {
-    fmt.Print(fmt.Sprint(i + 1) + ". " + store[i].Service + "    ")
-    fmt.Print(store[i].Username + "    ")
+    spacer := ""
+    for j := len(store[i].Service); j < 20; j++ { spacer += " " }
+    fmt.Print(fmt.Sprint(i + 1) + ". " + store[i].Service + spacer)
+
+    spacer = ""
+    for j := len(store[i].Username); j < 20; j++ { spacer += " " }
+    fmt.Print(store[i].Username + spacer)
+
     fmt.Println(store[i].Password)
   }
 } 
@@ -134,24 +141,7 @@ func main() {
     }
   }
 
-//  test, _ := os.Create("tester.json")
-//
-//  t := &entry{
-//    Service: "google",
-//    Username: "cotabas",
-//    Password: "qwerty"}
-//
-//    mt := map[int]*entry{}
-//
-//    mt[0] = t
-//
-//    mt[1] = t
-//
-//    jt, _ := json.Marshal(mt)
-//
-//  fmt.Println(string(jt))
-//
-//  test.Write(jt)
-//
+  //createKey, err := exec.LookPath("openssl genrsa 4096")
 
+  //getPub, err := exec.LookPath("openssl rsa -text file.key")
 }
