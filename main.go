@@ -1,68 +1,157 @@
 package main
 
 import (
+	"bufio"
 	"encoding/json"
 	"fmt"
 	"os"
 )
 
 type entry struct {
-
   Service string
   Username string
   Password string
 }
 
-func addEntry() (string, string, string) {
+func check(e error) {
+  if e != nil {
+    panic(e)
+  }
+}
 
-  var service string
-  var username string
-  var password string
-  
+func addEntry(scanner *bufio.Scanner, ent *entry) {
   fmt.Print("Service: ")
-  fmt.Scan(&service)
+  if scanner.Scan() {
+    ent.Service = scanner.Text()
+  }
 
   fmt.Print("Username: ")
-  fmt.Scan(&username)
+  if scanner.Scan() {
+    ent.Username = scanner.Text()
+  }
 
   fmt.Print("Password: ")
-  fmt.Scan(&password)
+  if scanner.Scan() {
+    ent.Password = scanner.Text()
+  }
+}
 
-  return service, username, password
+func addFile(fileName string) {
+  //make new rsa key
+  _, err := os.Create(fileName + ".json")
+  check(err)
+}
+
+func showEntries(store map[int]entry) {
+  fmt.Println(".  Service    Username    Password")
+  for i := 0; i < len(store); i++ {
+    fmt.Print(fmt.Sprint(i + 1) + ". " + store[i].Service + "    ")
+    fmt.Print(store[i].Username + "    ")
+    fmt.Println(store[i].Password)
+  }
+} 
+
+func readFile(fileName string) (map[int]entry) {
+  file, err := os.ReadFile(fileName + ".json")
+  check(err)
+  store := map[int]entry{}
+  json.Unmarshal(file, &store)
+
+  return store
+}
+
+func writeFile(fileName string, addition entry) {
+  store := readFile(fileName)
+
+  file, err := os.Create(fileName + ".json")
+  check(err)
+  
+  store[len(store)] = addition
+
+  writeByte, err := json.Marshal(store)
+  check(err)
+
+  file.Write(writeByte)
+  
+}
+
+func loginMenu(fileName string) {
+  
+  var choice string
+  scanner := bufio.NewScanner(os.Stdin)
+  fileMap := readFile(fileName)
+
+  fmt.Println(" .:" + fileName + ":. ")
+  showEntries(fileMap)
+
+  fmt.Println("\n\n\n1. Add new")
+  fmt.Println("2. Change")
+  fmt.Println("3. Remove")
+  fmt.Print("Select: ")
+  
+  if scanner.Scan() {
+    choice = scanner.Text()
+  }
+
+  switch choice {
+  case "1":
+    var newEntry entry
+    addEntry(scanner, &newEntry)
+    writeFile(fileName, newEntry)
+    loginMenu(fileName)
+  }
+
 }
 
 func main() {
   
-  test, _ := os.Create("tester.json")
+  scanner := bufio.NewScanner(os.Stdin)
+  var choice string
 
-  t := &entry{
-    Service: "google",
-    Username: "cotabas",
-    Password: "qwerty"}
+  fmt.Println(".:Pash:.")
+  fmt.Println("1. Login")
+  fmt.Println("2. New table")
+  fmt.Println("3. Exit")
 
-    mt := map[int]*entry{}
+  fmt.Print("Select: ")
+  if scanner.Scan() {
+    choice = scanner.Text()
+  }
 
-    mt[0] = t
+  switch choice {
+  case "1":
+    fmt.Println("Login")
+    fmt.Print("Table name: ")
+    if scanner.Scan() {
+      loginMenu(scanner.Text())
+    }
+  case "2":
+    fmt.Println("Create new table")
+    fmt.Print("Table name: ")
+    if scanner.Scan() {
+      addFile(scanner.Text())
+      loginMenu(scanner.Text())
+    }
+  }
 
-    mt[1] = t
+//  test, _ := os.Create("tester.json")
+//
+//  t := &entry{
+//    Service: "google",
+//    Username: "cotabas",
+//    Password: "qwerty"}
+//
+//    mt := map[int]*entry{}
+//
+//    mt[0] = t
+//
+//    mt[1] = t
+//
+//    jt, _ := json.Marshal(mt)
+//
+//  fmt.Println(string(jt))
+//
+//  test.Write(jt)
+//
 
-    jt, _ := json.Marshal(mt)
-
-  fmt.Println(string(jt))
-
-  test.Write(jt)
-
-  fmt.Println("now read it back")
-
-  reed, _ := os.ReadFile("tester.json")
-  tj := map[int]entry{}
-
-  fmt.Println(string(reed))
-
-  json.Unmarshal(reed, &tj)
-
-  fmt.Println(tj)
-
-  iconv := tj[0]
-  fmt.Println(iconv.Service)
 }
