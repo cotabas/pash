@@ -142,6 +142,7 @@ func main() {
   }
 
   //createKey, err := exec.LookPath("openssl genrsa 4096")
-
-  //getPub, err := exec.LookPath("openssl rsa -text file.key")
+  check(err)
+  getPub, err := exec.LookPath("openssl rsa -text file.key")
+  check(err)
 }
