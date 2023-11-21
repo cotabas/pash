@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"strings"
 )
 
 type entry struct {
@@ -38,9 +39,22 @@ func addEntry(scanner *bufio.Scanner, ent *entry) {
 }
 
 func addFile(fileName string) {
-  //make new rsa key
+  var out strings.Builder
+
   _, err := os.Create(fileName + ".json")
   check(err)
+  
+  keyFile, err := os.Create(fileName + ".key")
+  check(err)
+
+  createKey := exec.Command("openssl", "genrsa", "4096")
+  createKey.Stdin = strings.NewReader("")
+  createKey.Stdout = &out
+
+  err = createKey.Run()
+  check(err)
+
+  keyFile.Write([]byte(out.String()))
 }
 
 func showEntries(store map[int]entry) {
@@ -141,8 +155,23 @@ func main() {
     }
   }
 
-  //createKey, err := exec.LookPath("openssl genrsa 4096")
+  createKey := exec.Command("openssl", "genrsa", "4096")
+  //("openssl rsa -text file.key")
+
+  createKey.Stdin = strings.NewReader("")
+
+  fileName := "blah"
+
+  var out strings.Builder
+
+  keyFile, err := os.Create(fileName + ".key")
   check(err)
-  getPub, err := exec.LookPath("openssl rsa -text file.key")
+
+  createKey.Stdout = &out
+
+  err = createKey.Run()
   check(err)
+
+  keyFile.Write([]byte(out.String()))
+  fmt.Println(out.String())
 }
