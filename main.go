@@ -155,23 +155,19 @@ func main() {
     }
   }
 
-  createKey := exec.Command("openssl", "genrsa", "4096")
+  fileName := "blah"
+
+  createKey := exec.Command("openssl", "rsa", "-text", "-in", fileName + ".key", "-noout")
   //("openssl rsa -text file.key")
 
   createKey.Stdin = strings.NewReader("")
 
-  fileName := "blah"
-
   var out strings.Builder
-
-  keyFile, err := os.Create(fileName + ".key")
-  check(err)
 
   createKey.Stdout = &out
 
-  err = createKey.Run()
+  err := createKey.Run()
   check(err)
 
-  keyFile.Write([]byte(out.String()))
   fmt.Println(out.String())
 }
