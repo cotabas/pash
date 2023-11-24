@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/exec"
 	"strings"
+  "math/big"
 )
 
 type entry struct {
@@ -174,5 +175,13 @@ func main() {
   //sp := strings.ReplaceAll(sa, "\n", "")
   //fmt.Println(s)
   fmt.Println(strings.Join(s[6:11], ""))
+
+  hex := strings.Join(s[6:11], "")
+
+  hex = strings.ReplaceAll(hex, ":", "")
+  fmt.Println(hex)
+  dec, _ := new(big.Int).SetString(hex, 16)
+
+  fmt.Println(dec)
 
 }
