@@ -155,7 +155,7 @@ func main() {
     }
   }
 
-  fileName := "blah"
+  fileName := "t"
 
   createKey := exec.Command("openssl", "rsa", "-text", "-in", fileName + ".key", "-noout")
   //("openssl rsa -text file.key")
@@ -169,5 +169,10 @@ func main() {
   err := createKey.Run()
   check(err)
 
-  fmt.Println(out.String())
+  s := strings.Fields(out.String())
+  //sa := strings.Join(s, "")
+  //sp := strings.ReplaceAll(sa, "\n", "")
+  //fmt.Println(s)
+  fmt.Println(strings.Join(s[6:11], ""))
+
 }
