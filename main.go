@@ -4,10 +4,11 @@ import (
 	"bufio"
 	"encoding/json"
 	"fmt"
+	"math"
+	"math/big"
 	"os"
 	"os/exec"
 	"strings"
-  "math/big"
 )
 
 type entry struct {
@@ -159,7 +160,6 @@ func main() {
   fileName := "t"
 
   createKey := exec.Command("openssl", "rsa", "-text", "-in", fileName + ".key", "-noout")
-  //("openssl rsa -text file.key")
 
   createKey.Stdin = strings.NewReader("")
 
@@ -171,17 +171,34 @@ func main() {
   check(err)
 
   s := strings.Fields(out.String())
-  //sa := strings.Join(s, "")
-  //sp := strings.ReplaceAll(sa, "\n", "")
-  //fmt.Println(s)
-  fmt.Println(strings.Join(s[6:11], ""))
+  fmt.Println(s)
 
   hex := strings.Join(s[6:11], "")
-
   hex = strings.ReplaceAll(hex, ":", "")
   fmt.Println(hex)
-  dec, _ := new(big.Int).SetString(hex, 16)
+  modulus, _ := new(big.Int).SetString(hex, 16)
 
-  fmt.Println(dec)
+  hex = strings.Join(s[15:20], "")
+  hex = strings.ReplaceAll(hex, ":", "")
+  fmt.Println(hex)
+  private, _ := new(big.Int).SetString(hex, 16)
+  fmt.Println(modulus)
+  fmt.Println(private)
+  var public float64 = 65537
+
+  pow := new(big.Int)
+  pow = big.NewInt(int64(math.Pow(65, public)))
+  _, answer := new(big.Int).DivMod(pow, modulus, new(big.Int)) 
+
+  fmt.Println(answer)
+
+  pexp := new(big.Int).Exp(answer, private, nil)
+
+  fmt.Println(pexp)
+
+  _, answer = new(big.Int).DivMod(pexp, modulus, new(big.Int))
+
+  fmt.Println(answer)
+
 
 }
