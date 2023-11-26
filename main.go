@@ -191,12 +191,12 @@ func main() {
   _, answer := new(big.Int).DivMod(pow, modulus, new(big.Int)) 
 
   fmt.Println(answer)
+  
+  //so slow..
+  //pexp := new(big.Int).Exp(answer, private, nil)
 
-  pexp := new(big.Int).Exp(answer, private, nil)
 
-  fmt.Println(pexp)
-
-  _, answer = new(big.Int).DivMod(pexp, modulus, new(big.Int))
+  //_, answer = new(big.Int).DivMod(pexp, modulus, new(big.Int))
 
   fmt.Println(answer)
 
