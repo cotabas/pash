@@ -8,14 +8,15 @@ import (
 	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
-  "encoding/pem"
+	"encoding/pem"
 	"fmt"
 	"os"
+	"strings"
 )
 
 type entry struct {
   Service string
-  Username string
+  Username []byte 
   Password []byte
 }
 
@@ -33,7 +34,7 @@ func addEntry(scanner *bufio.Scanner, ent *entry) {
 
   fmt.Print("Username: ")
   if scanner.Scan() {
-    ent.Username = scanner.Text()
+    ent.Username = []byte(scanner.Text())
   }
 
   fmt.Print("Password: ")
@@ -47,19 +48,29 @@ func encryptPass(ent *entry, publicKey rsa.PublicKey) {
     sha256.New(),
     rand.Reader,
     &publicKey,
-    []byte(ent.Password),
+    ent.Password,
     nil)
   check(err)
   ent.Password = encryptedBytes
 }
 
+func encryptUser(ent *entry, publicKey rsa.PublicKey) {
+  encryptedBytes, err := rsa.EncryptOAEP(
+    sha256.New(),
+    rand.Reader,
+    &publicKey,
+    ent.Username,
+    nil)
+  check(err)
+  ent.Username = encryptedBytes
+}
 
 func addFile(fileName string) {
 
   _, err := os.Create(fileName + ".json")
   check(err)
   
-  keyFile, err := os.Create(fileName + ".pem")
+  keyFile, err := os.Create(fileName)
   check(err)
   
   privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
@@ -73,18 +84,6 @@ func addFile(fileName string) {
   )
 
   keyFile.Write(pkPem)
-//  var out strings.Builder
-//  keyFile, err := os.Create(fileName + ".key")
-//  check(err)
-//
-//  createKey := exec.Command("openssl", "genrsa", "4096")
-//  createKey.Stdin = strings.NewReader("")
-//  createKey.Stdout = &out
-//
-//  err = createKey.Run()
-//  check(err)
-//
-//  keyFile.Write([]byte(out.String()))
 }
 
 func showEntries(store map[int]entry, privateKey *rsa.PrivateKey) {
@@ -95,12 +94,14 @@ func showEntries(store map[int]entry, privateKey *rsa.PrivateKey) {
     fmt.Print(fmt.Sprint(i + 1) + ". " + store[i].Service + spacer)
 
     spacer = ""
-    for j := len(store[i].Username); j < 20; j++ { spacer += " " }
-    fmt.Print(store[i].Username + spacer)
-
-    decryptedBytes, err := privateKey.Decrypt(nil, store[i].Password, &rsa.OAEPOptions{Hash: crypto.SHA256})
+    userBytes, err := privateKey.Decrypt(nil, store[i].Username, &rsa.OAEPOptions{Hash: crypto.SHA256})
     check(err)
-    fmt.Println(string(decryptedBytes))
+    for j := len(userBytes); j < 20; j++ { spacer += " " }
+    fmt.Print(string(userBytes) + spacer)
+
+    passBytes, err := privateKey.Decrypt(nil, store[i].Password, &rsa.OAEPOptions{Hash: crypto.SHA256})
+    check(err)
+    fmt.Println(string(passBytes))
   }
 } 
 
@@ -130,7 +131,7 @@ func writeFile(fileName string, addition entry) {
 
 func getPrivateKey(fileName string) (*rsa.PrivateKey) {
 
-  pkPem, err := os.ReadFile(fileName + ".pem")
+  pkPem, err := os.ReadFile(fileName)
   check(err)
 
   block, _ := pem.Decode(pkPem)
@@ -141,21 +142,22 @@ func getPrivateKey(fileName string) (*rsa.PrivateKey) {
   return privateKey
 }
 
-func loginMenu(fileName string) {
+func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   
   var choice string
   scanner := bufio.NewScanner(os.Stdin)
   fileMap := readFile(fileName)
 
-  privateKey := getPrivateKey(fileName)
   publicKey := privateKey.PublicKey
 
   fmt.Println(" .:" + fileName + ":. ")
   showEntries(fileMap, privateKey)
 
   fmt.Println("\n\n\n1. Add new")
-  fmt.Println("2. Change")
+  fmt.Println("2. Copy to Clipboard")
   fmt.Println("3. Remove")
+  fmt.Println("4. Change")
+  fmt.Println("5. Exit")
   fmt.Print("Select: ")
   
   if scanner.Scan() {
@@ -167,129 +169,66 @@ func loginMenu(fileName string) {
     var newEntry entry
     addEntry(scanner, &newEntry)
     encryptPass(&newEntry, publicKey)
+    encryptUser(&newEntry, publicKey)
     writeFile(fileName, newEntry)
-    loginMenu(fileName)
+    loginMenu(fileName, privateKey)
+  case "2":
+    fmt.Print("Number: ")
+    if scanner.Scan() {
+      fmt.Println("copy" + scanner.Text() + "to the Clipboard!")
+    }
   }
 
 }
 
 func main() {
-  
-  scanner := bufio.NewScanner(os.Stdin)
-  var choice string
 
-  fmt.Println(".:Pash:.")
-  fmt.Println("1. Login")
-  fmt.Println("2. New table")
-  fmt.Println("3. Exit")
+  pemFile := os.Args[1:]
 
-  fmt.Print("Select: ")
-  if scanner.Scan() {
-    choice = scanner.Text()
-  }
 
-  switch choice {
-  case "1":
-    fmt.Println("Login")
-    fmt.Print("Table name: ")
+  if len(pemFile) == 0 {
+    scanner := bufio.NewScanner(os.Stdin)
+    var choice string
+
+    fmt.Println(".:Pash:.")
+    fmt.Println("1. Login")
+    fmt.Println("2. New table")
+    fmt.Println("3. Exit")
+
+    fmt.Print("Select: ")
     if scanner.Scan() {
-      loginMenu(scanner.Text())
+      choice = scanner.Text()
     }
-  case "2":
-    fmt.Println("Create new table")
-    fmt.Print("Table name: ")
-    if scanner.Scan() {
-      addFile(scanner.Text())
-      loginMenu(scanner.Text())
+
+    switch choice {
+    case "1":
+      fmt.Println("Login")
+      fmt.Print("Table name: ")
+      if scanner.Scan() {
+        privateKey := getPrivateKey(scanner.Text())
+        loginMenu(scanner.Text(), privateKey)
+      }
+    case "2":
+      fmt.Println("Create new table")
+      fmt.Print("Table name: ")
+      if scanner.Scan() {
+        addFile(scanner.Text())
+        privateKey := getPrivateKey(scanner.Text())
+        loginMenu(scanner.Text(), privateKey)
+      }
     }
   }
+  if len(pemFile) != 0 {
+    privateKey := getPrivateKey(pemFile[0])
 
-  //fileName := "t"
+    par := strings.FieldsFunc(pemFile[0], func(r rune) bool {
+      if r == '/' { return true }
+      return false
+    })
 
-  privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
-  check(err)
+    fileName := par[len(par) - 1]
+    loginMenu(fileName, privateKey)
 
-  publicKey := privateKey.PublicKey
-
-  encryptedBytes, err := rsa.EncryptOAEP(
-    sha256.New(),
-    rand.Reader,
-    &publicKey,
-    []byte("super secret message"),
-    nil)
-    check(err)
-
-
-	fmt.Println("encrypted bytes: ", encryptedBytes)
-
-  decryptedBytes, err := privateKey.Decrypt(nil, encryptedBytes, &rsa.OAEPOptions{Hash: crypto.SHA256})
-
-  check(err)
-  fmt.Println("decrypted message: ", string(decryptedBytes))
-
-  pkPem := pem.EncodeToMemory(
-    &pem.Block{
-      Type:  "RSA PRIVATE KEY",
-      Bytes: x509.MarshalPKCS1PrivateKey(privateKey),
-    },
-  )
-
-  fmt.Println(pkPem)
-
-  kf, _ := os.Create("t.pem")
-
-  kf.Write(pkPem)
-
-      block, _ := pem.Decode([]byte(pkPem))
-
-    priv, err := x509.ParsePKCS1PrivateKey(block.Bytes)
-
-    fmt.Println(priv)
-
-  decryptedBytes, err = priv.Decrypt(nil, encryptedBytes, &rsa.OAEPOptions{Hash: crypto.SHA256})
-
-  check(err)
-  fmt.Println("decrypted message: ", string(decryptedBytes))
-//
-//  createKey := exec.Command("openssl", "rsa", "-text", "-in", fileName + ".key", "-noout")
-//
-//  createKey.Stdin = strings.NewReader("")
-//
-//  var out strings.Builder
-//
-//  createKey.Stdout = &out
-//
-//  err := createKey.Run()
-//  check(err)
-//
-//  s := strings.Fields(out.String())
-//  fmt.Println(s)
-//
-//  hex := strings.Join(s[6:11], "")
-//  hex = strings.ReplaceAll(hex, ":", "")
-//  fmt.Println(hex)
-//  modulus, _ := new(big.Int).SetString(hex, 16)
-//
-//  hex = strings.Join(s[15:20], "")
-//  hex = strings.ReplaceAll(hex, ":", "")
-//  fmt.Println(hex)
-//  private, _ := new(big.Int).SetString(hex, 16)
-//  fmt.Println(modulus)
-//  fmt.Println(private)
-//  var public float64 = 65537
-//
-//  pow := new(big.Int)
-//  pow = big.NewInt(int64(math.Pow(65, public)))
-//  _, answer := new(big.Int).DivMod(pow, modulus, new(big.Int)) 
-//
-//  fmt.Println(answer)
-  
-  //so slow..
-  //pexp := new(big.Int).Exp(answer, private, nil)
-
-
-  //_, answer = new(big.Int).DivMod(pexp, modulus, new(big.Int))
-
-
+  }
 
 }
