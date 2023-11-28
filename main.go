@@ -47,6 +47,29 @@ func addEntry(scanner *bufio.Scanner, ent *entry) {
   }
 }
 
+func removeEntry(fileMap map[int]entry, enteredNumber string, fileName string) {
+  remove, err := strconv.Atoi(enteredNumber)
+  check(err)
+  file, err := os.Create(fileName + ".json")
+  check(err)
+
+  newMap := make(map[int]entry)
+
+  delete(fileMap, remove - 1)
+
+  for i := 0; i < len(fileMap); i++ {
+    if i >= remove - 1 { 
+      newMap[i] = fileMap[i + 1]
+    } else {
+      newMap[i] = fileMap[i]
+    }
+  }
+  writeBytes, err := json.Marshal(newMap)
+  check(err)
+
+  file.Write(writeBytes)
+}
+
 func encryptPass(ent *entry, publicKey rsa.PublicKey) {
   encryptedBytes, err := rsa.EncryptOAEP(
     sha256.New(),
@@ -191,6 +214,12 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
     fmt.Print("Number: ")
     if scanner.Scan() {
       copyPass(scanner.Text(), fileMap, privateKey)
+      loginMenu(fileName, privateKey)
+    }
+  case "3":
+    fmt.Print("Number: ")
+    if scanner.Scan() {
+      removeEntry(fileMap, scanner.Text(), fileName)
       loginMenu(fileName, privateKey)
     }
   }
