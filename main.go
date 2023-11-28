@@ -5,7 +5,7 @@ import (
 	"crypto"
 	"crypto/rand"
 	"crypto/rsa"
-	"crypto/sha256"
+	"crypto/sha512"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -72,7 +72,7 @@ func removeEntry(fileMap map[int]entry, enteredNumber string, fileName string) {
 
 func encryptPass(ent *entry, publicKey rsa.PublicKey) {
   encryptedBytes, err := rsa.EncryptOAEP(
-    sha256.New(),
+    sha512.New(),
     rand.Reader,
     &publicKey,
     ent.Password,
@@ -83,7 +83,7 @@ func encryptPass(ent *entry, publicKey rsa.PublicKey) {
 
 func encryptUser(ent *entry, publicKey rsa.PublicKey) {
   encryptedBytes, err := rsa.EncryptOAEP(
-    sha256.New(),
+    sha512.New(),
     rand.Reader,
     &publicKey,
     ent.Username,
@@ -100,7 +100,7 @@ func addFile(fileName string) {
   keyFile, err := os.Create(fileName)
   check(err)
   
-  privateKey, err := rsa.GenerateKey(rand.Reader, 2048)
+  privateKey, err := rsa.GenerateKey(rand.Reader, 4096)
   check(err)
 
   pkPem := pem.EncodeToMemory(
@@ -124,12 +124,12 @@ func showEntries(store map[int]entry, privateKey *rsa.PrivateKey) {
     fmt.Print(Green + fmt.Sprint(i + 1) + numSpacer + Reset + store[i].Service + spacer)
 
     spacer = ""
-    userBytes, err := privateKey.Decrypt(nil, store[i].Username, &rsa.OAEPOptions{Hash: crypto.SHA256})
+    userBytes, err := privateKey.Decrypt(nil, store[i].Username, &rsa.OAEPOptions{Hash: crypto.SHA512})
     check(err)
     for j := len(userBytes); j < 20; j++ { spacer += " " }
     fmt.Print(string(userBytes) + spacer)
 
-    passBytes, err := privateKey.Decrypt(nil, store[i].Password, &rsa.OAEPOptions{Hash: crypto.SHA256})
+    passBytes, err := privateKey.Decrypt(nil, store[i].Password, &rsa.OAEPOptions{Hash: crypto.SHA512})
     check(err)
     fmt.Println(string(passBytes))
   }
@@ -159,9 +159,9 @@ func writeFile(fileName string, addition entry) {
   
 }
 
-func getPrivateKey(fileName string) (*rsa.PrivateKey) {
+func getPrivateKey(keyFile string) (*rsa.PrivateKey) {
 
-  pkPem, err := os.ReadFile(fileName)
+  pkPem, err := os.ReadFile(keyFile)
   check(err)
 
   block, _ := pem.Decode(pkPem)
@@ -176,7 +176,7 @@ func copyPass(entryNumber string, fileMap map[int]entry, privateKey *rsa.Private
   num, err := strconv.Atoi(entryNumber)
   check(err)
   pass := fileMap[num - 1].Password
-  passBytes, err := privateKey.Decrypt(nil, pass, &rsa.OAEPOptions{Hash: crypto.SHA256})
+  passBytes, err := privateKey.Decrypt(nil, pass, &rsa.OAEPOptions{Hash: crypto.SHA512})
   check(err)
   copyCmd := exec.Command(SYS_COPY, string(passBytes))
   err = copyCmd.Run()
@@ -234,7 +234,6 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
       }
     }
   }
-
 }
 
 func main() {
@@ -246,7 +245,7 @@ func main() {
 
     fmt.Println(".:Pash:.")
     fmt.Println("1. Login")
-    fmt.Println("2. New table")
+    fmt.Println("2. New Key")
     fmt.Println("3. Exit")
 
     fmt.Print("Select: ")
@@ -257,10 +256,17 @@ func main() {
     switch choice {
     case "1":
       fmt.Println("Login")
-      fmt.Print("Table name: ")
+      fmt.Print(Yellow + "Key File " + Gray + "[full path to key file]" + Reset + ": ")
       if scanner.Scan() {
+        par := strings.FieldsFunc(scanner.Text(), func(r rune) bool {
+          if r == '/' { return true }
+          return false
+        })
+
+        fileName := par[len(par) - 1]
+
         privateKey := getPrivateKey(scanner.Text())
-        loginMenu(scanner.Text(), privateKey)
+        loginMenu(fileName, privateKey)
       }
     case "2":
       fmt.Println("Create new table")
