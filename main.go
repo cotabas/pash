@@ -114,11 +114,14 @@ func addFile(fileName string) {
 }
 
 func showEntries(store map[int]entry, privateKey *rsa.PrivateKey) {
-  fmt.Println(".  Service             Username            Password")
+  fmt.Println(Blue + ".    Service             Username            Password" + Reset)
   for i := 0; i < len(store); i++ {
+    numSpacer := ".   "
+    if i > 8 { numSpacer = ".  " }
+    if i > 98 { numSpacer = ". " }
     spacer := ""
     for j := len(store[i].Service); j < 20; j++ { spacer += " " }
-    fmt.Print(fmt.Sprint(i + 1) + ". " + store[i].Service + spacer)
+    fmt.Print(Green + fmt.Sprint(i + 1) + numSpacer + Reset + store[i].Service + spacer)
 
     spacer = ""
     userBytes, err := privateKey.Decrypt(nil, store[i].Username, &rsa.OAEPOptions{Hash: crypto.SHA256})
@@ -188,14 +191,14 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
 
   publicKey := privateKey.PublicKey
 
-  fmt.Println(" .:" + fileName + ":. ")
+  fmt.Println("                         .:" + Yellow + fileName + Reset + ":. ")
   showEntries(fileMap, privateKey)
 
-  fmt.Println("\n\n\n1. Add new")
-  fmt.Println("2. Copy to Clipboard")
-  fmt.Println("3. Remove")
+  fmt.Println(Yellow + "\n\n\n1." + Reset + " Add new")
+  fmt.Println(Blue + "2." + Reset + " Copy to Clipboard")
+  fmt.Println(Red + "3." + Reset + " Remove")
   fmt.Println("4. Change")
-  fmt.Println("5. Exit")
+  fmt.Println(Purple + "5." + Reset + " Exit")
   fmt.Print("Select: ")
   
   if scanner.Scan() {
@@ -219,15 +222,22 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   case "3":
     fmt.Print("Number: ")
     if scanner.Scan() {
-      removeEntry(fileMap, scanner.Text(), fileName)
-      loginMenu(fileName, privateKey)
+      choice := scanner.Text()
+      fmt.Print(Red + "Are you sure, remove " + Green + choice + Red + "?" + Reset + " [y/N]")
+      if scanner.Scan() {
+        if scanner.Text() == "y" { 
+          removeEntry(fileMap, choice, fileName)
+          loginMenu(fileName, privateKey) 
+        } else {
+          loginMenu(fileName, privateKey)
+        }
+      }
     }
   }
 
 }
 
 func main() {
-
   pemFile := os.Args[1:]
 
   if len(pemFile) == 0 {
