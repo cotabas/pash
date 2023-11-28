@@ -11,8 +11,12 @@ import (
 	"encoding/pem"
 	"fmt"
 	"os"
+	"os/exec"
+	"strconv"
 	"strings"
 )
+
+var SYS_COPY string = "wl-copy"
 
 type entry struct {
   Service string
@@ -142,6 +146,17 @@ func getPrivateKey(fileName string) (*rsa.PrivateKey) {
   return privateKey
 }
 
+func copyPass(entryNumber string, fileMap map[int]entry, privateKey *rsa.PrivateKey) {
+  num, err := strconv.Atoi(entryNumber)
+  check(err)
+  pass := fileMap[num - 1].Password
+  passBytes, err := privateKey.Decrypt(nil, pass, &rsa.OAEPOptions{Hash: crypto.SHA256})
+  check(err)
+  copyCmd := exec.Command(SYS_COPY, string(passBytes))
+  err = copyCmd.Run()
+  check(err)
+}
+
 func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   
   var choice string
@@ -175,7 +190,8 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   case "2":
     fmt.Print("Number: ")
     if scanner.Scan() {
-      fmt.Println("copy" + scanner.Text() + "to the Clipboard!")
+      copyPass(scanner.Text(), fileMap, privateKey)
+      loginMenu(fileName, privateKey)
     }
   }
 
@@ -184,7 +200,6 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
 func main() {
 
   pemFile := os.Args[1:]
-
 
   if len(pemFile) == 0 {
     scanner := bufio.NewScanner(os.Stdin)
