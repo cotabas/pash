@@ -236,6 +236,18 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   }
 }
 
+func logIn(pemFile []string) {
+  privateKey := getPrivateKey(pemFile[0])
+
+  par := strings.FieldsFunc(pemFile[0], func(r rune) bool {
+    if r == '/' { return true }
+    return false
+  })
+
+  fileName := par[len(par) - 1]
+  loginMenu(fileName, privateKey)
+}
+
 func main() {
   pemFile := os.Args[1:]
 
@@ -278,17 +290,11 @@ func main() {
       }
     }
   }
-  if len(pemFile) != 0 {
-    privateKey := getPrivateKey(pemFile[0])
-
-    par := strings.FieldsFunc(pemFile[0], func(r rune) bool {
-      if r == '/' { return true }
-      return false
-    })
-
-    fileName := par[len(par) - 1]
-    loginMenu(fileName, privateKey)
-
+  if len(pemFile) == 1 {
+    logIn(pemFile)
   }
 
+  if len(pemFile) > 1 {
+    
+  }
 }
