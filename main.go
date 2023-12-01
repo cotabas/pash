@@ -172,6 +172,16 @@ func getPrivateKey(keyFile string) (*rsa.PrivateKey) {
   return privateKey
 }
 
+func printPass(entryNumber string, fileMap map[int]entry, privateKey *rsa.PrivateKey) {
+  num, err := strconv.Atoi(entryNumber)
+  check(err)
+  pass := fileMap[num - 1].Password
+  passBytes, err := privateKey.Decrypt(nil, pass, &rsa.OAEPOptions{Hash: crypto.SHA512})
+  check(err)
+  fmt.Print(string(passBytes))
+
+}
+
 func copyPass(entryNumber string, fileMap map[int]entry, privateKey *rsa.PrivateKey) {
   num, err := strconv.Atoi(entryNumber)
   check(err)
@@ -236,7 +246,7 @@ func loginMenu(fileName string, privateKey *rsa.PrivateKey) {
   }
 }
 
-func logIn(pemFile []string) {
+func getKey(pemFile []string) (string, *rsa.PrivateKey) {
   privateKey := getPrivateKey(pemFile[0])
 
   par := strings.FieldsFunc(pemFile[0], func(r rune) bool {
@@ -245,7 +255,7 @@ func logIn(pemFile []string) {
   })
 
   fileName := par[len(par) - 1]
-  loginMenu(fileName, privateKey)
+  return fileName, privateKey
 }
 
 func main() {
@@ -291,10 +301,13 @@ func main() {
     }
   }
   if len(pemFile) == 1 {
-    logIn(pemFile)
+    fileName, privateKey := getKey(pemFile)
+    loginMenu(fileName, privateKey)
   }
 
   if len(pemFile) > 1 {
-    
+    fileName, privateKey := getKey(pemFile)
+    fileMap := readFile(fileName)
+    printPass(pemFile[1], fileMap, privateKey)  
   }
 }
