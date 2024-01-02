@@ -307,7 +307,7 @@ func main() {
 
   if len(pemFile) > 1 {
     fileName, privateKey := getKey(pemFile)
-    fileMap := readFile(fileName)
+    fileMap := readFile("/usr/bin/" + fileName)
     printPass(pemFile[1], fileMap, privateKey)  
   }
 }
