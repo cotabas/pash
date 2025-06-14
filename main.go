@@ -286,7 +286,12 @@ func main() {
         })
 
         fileName := par[len(par) - 1]
-
+//        extDex := strings.Index(fileName, ".")
+//
+//        if extDex > -1 {
+//          fileName = fileName[0:extDex]
+//        }
+//fmt.Println(fileName)
         privateKey := getPrivateKey(scanner.Text())
         loginMenu(fileName, privateKey)
       }
